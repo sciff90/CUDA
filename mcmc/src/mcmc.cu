@@ -9,8 +9,8 @@
 #define M 128
 
 #define Nmax 100000
-unsigned int order;
-
+#define num_samples 401
+#define order 2
 #define Nthreads M*N
 __host__ __device__
 unsigned int hash(unsigned int a)
@@ -45,9 +45,7 @@ __global__ void kernel(float * a_save,float* u,float* D) {
 	thrust::default_random_engine rng_normal(seed_normal);
 	thrust::default_random_engine rng_uniform(seed_uniform);
 	thrust::random::experimental::normal_distribution<float> dist_norm(0,1);
-	thrust::random::uniform_real_distribution<float> dist_uniform(0,1);
-	const unsigned int order = 2;
-	
+	thrust::random::uniform_real_distribution<float> dist_uniform(0,1);	
 
 	float b_curr[order+1],a_curr[order+1];
 	float b_cand[order+1],a_cand[order+1];
@@ -67,6 +65,7 @@ __global__ void kernel(float * a_save,float* u,float* D) {
 	int accepted = 0;
 	int nn = 0;
 	int burnin = 0;
+	int count = 0;
 	double sigma = 1.0;
 	
 
@@ -99,7 +98,7 @@ __global__ void kernel(float * a_save,float* u,float* D) {
 				b_curr[ii] = b_cand[ii];
 			}
 			chi_curr = chi_cand;
-			accepted++
+			accepted++;
 		}
 
 		if(count%1000==0 && count!=0 && flg==0)
@@ -119,7 +118,7 @@ __global__ void kernel(float * a_save,float* u,float* D) {
 			}
 			else
 			{
-				burnin = n-1;
+				burnin = nn-1;
 				flg = 1;
 			}
 		}
@@ -137,21 +136,21 @@ __global__ void kernel(float * a_save,float* u,float* D) {
 int main(void)
 {
 	//Read in Parameters
-	int num_samples;
+	unsigned int num_samples1,order1;
 	float fs,fc,fnorm,dt,t1,t0;
 
 	std::ifstream params;
 	std::string fn = "data/params.dat";
 	params.open(fn.c_str());
 	params.ignore(10000,'\n');
-	params>>order;
+	params>>order1;
 	params>>fs;
 	params>>fc;
 	params>>fnorm;
 	params>>dt;
 	params>>t1;
 	params>>t0;
-	params>>num_samples;
+	params>>num_samples1;
 
 	//Read in u t and D
 	
@@ -162,9 +161,9 @@ int main(void)
 	D_dat.open("data/D.dat");
 	t_dat.open("data/t.dat");
 	std::cout<<"order = "<<order<<std::endl;
-	std::cout<<"num_samples = "<<num_samples<<std::endl;
+	std::cout<<"num_samples = "<<num_samples1<<std::endl;
 	float val;
-	for(int ii=0;ii<num_samples;ii++)
+	for(int ii=0;ii<num_samples1;ii++)
 	{	
 		u_dat>>val;
 		u.push_back(val);
