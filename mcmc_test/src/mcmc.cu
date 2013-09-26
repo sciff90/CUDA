@@ -6,9 +6,9 @@
 #include <fstream>
 #include <string>
 #define N 1 
-#define M 1 
+#define M 128 
 
-#define Nmax 220000
+#define Nmax 100000
 #define num_samples 401
 #define order 2
 #define Nthreads M*N
@@ -53,7 +53,7 @@ void filter_out(float a[],float b[],float y[],float u[],int Npts,int n_order)
 }
 
 __device__
-float RSS(float y1[],float y2[],int Npts)	
+double RSS(float y1[],float y2[],int Npts)	
 {
 	int ii;
 	double total = 0;
@@ -95,9 +95,9 @@ __global__ void kernel(float * a_save,float* b_save,float* u,float* D) {
 	//Filter Output
 	filter_out(a_curr,b_curr,y_curr,u,num_samples,order);
 	
-	printf("u[1] = %f\n",u[1]);
-	a_save[1] = 0.123456;
-	printf("a_save[1] = %f\n",a_save[1]);
+	//printf("u[1] = %f\n",u[1]);
+	//a_save[1] = 0.123456;
+	//printf("a_save[1] = %f\n",a_save[1]);
 	double chi_curr,chi_cand,ratio,a_ratio;
 	int flg = 0;
 	int accepted = 0;
@@ -108,7 +108,7 @@ __global__ void kernel(float * a_save,float* b_save,float* u,float* D) {
 	
 
 	//RSS for error functions chi
-	chi_curr = RSS(D,y_cand,num_samples);
+	chi_curr = RSS(D,y_curr,num_samples);
 
 
 
@@ -123,14 +123,21 @@ __global__ void kernel(float * a_save,float* b_save,float* u,float* D) {
 			b_cand[ii] = b_curr[ii] + sigma*dist_norm(rng_normal);
 		}
 		a_cand[0] = 1.0;
-		//printf("randn*sigma = %f\n",sigma);
+		//printf("randn = %f\n",dist_norm(rng_normal));
 		//printf("a_cand[2] = %f\n",a_cand[2]);
 		//Filter Output
 		filter_out(a_cand,b_cand,y_cand,u,num_samples,order);
 		//Rss for candidate
 		chi_cand = RSS(D,y_cand,num_samples);
 		ratio = exp(-(chi_cand)+chi_curr);
-	
+	/*	if(nn%1000==0)
+		{
+			printf("ratio = %f\n",ratio);
+			printf("sigma = %f\n",sigma);
+			printf("chi_curr = %f\n",chi_curr);
+			printf("chi_cand = %f\n\n",chi_cand);
+		}
+		*/
 		if(dist_uniform(rng_uniform)<=ratio)
 		{
 			for(int ii=0;ii<order+1;ii++)
@@ -139,7 +146,7 @@ __global__ void kernel(float * a_save,float* b_save,float* u,float* D) {
 				b_curr[ii] = b_cand[ii];
 			}
 			chi_curr = chi_cand;
-			if(nn%1000==0)	printf("ratio = %f\n",ratio);
+		
 			accepted++;
 		}
 
@@ -148,7 +155,7 @@ __global__ void kernel(float * a_save,float* b_save,float* u,float* D) {
 			
 			a_ratio = (double)(accepted)/count;
 			//printf("a_ratio = %f\n",a_ratio);
-			printf("sigma = %f\n",sigma);
+			//printf("sigma = %f\n",sigma);
 			if(a_ratio < 0.3)
 			{
 				sigma = sigma/1.2;
@@ -180,8 +187,8 @@ __global__ void kernel(float * a_save,float* b_save,float* u,float* D) {
 		}
 
 	}
-	for(int ii=0;ii<Nmax;ii++)
-		printf("a_save[1] = %f\n",a_save[grid_map(1,ii,global_idx)]);
+	//for(int ii=0;ii<Nmax;ii++)
+	//	printf("a_save[1] = %f\n",a_save[grid_map(1,ii,global_idx)]);
 
 
 }

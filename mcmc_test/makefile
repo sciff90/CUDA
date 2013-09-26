@@ -16,8 +16,7 @@ COMP = nvcc
 	
 #Define Switches
 #SWITCH = -O2 -fopenmp -std=c++0x
-SWITCH = -arch=sm_20 -g
-
+SWITCH =  -arch=sm_20 
 #Define Libraries
 #LIB_DIR = 
 #LIB = 
