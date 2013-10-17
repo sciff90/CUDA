@@ -1,43 +1,47 @@
-#include <mex.h>
 #include <thrust/random.h>
 #include <thrust/device_vector.h>
 #include <thrust/transform.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <iostream>
 #include <fstream>
-struct prg
+__device__host__ 
+
+
+void gridmap()
+
+__global__ 
+void hello(char *a, int *b) 
 {
-	float a, b;
+	a[threadIdx.x] += b[threadIdx.x];
+	printf("testing\n\n");
+}
 
-	__host__ __device__ 
-		prg(float _a=0.f, float _b=1.f) : a(_a), b(_b) {};
-	__host__ __device__ 
-		float operator()(const unsigned int n) const
-		{
-			thrust::default_random_engine rng;
-			thrust::random::experimental::normal_distribution<float> dist(a, b);
-			rng.discard(n);
-
-			return dist(rng);
-		}
-};
-
-
-void func(double *u,double *y,double *theta,int dimx,int dimy)
+void func(double *u,double *y,double *theta,int order,int chain_length,int num_samples)
 {
-	const int N = dimx;
-	thrust::device_vector<float> numbers(N);	    
-	thrust::counting_iterator<unsigned int> index_sequence_begin(0);
-	thrust::transform(index_sequence_begin,index_sequence_begin + N,numbers.begin(),prg(0.f,1.f));
+	const int N = 16;
+	const int blocksize = 16;
+	char a[N] = "Hello \0\0\0\0\0\0";
+	int b[N] = {15, 10, 6, 0, -11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-	std::ofstream myfile;
-	myfile.open("data/normal.dat");
-	for(int i = 0; i < N; i++)
-	{
-		myfile << numbers[i] << std::endl;
-		printf("y[%d] = %f\n",i,y[i]);
-	}
-	myfile.close();
+	char *ad;
+	int *bd;
+	const int csize = N*sizeof(char);
+	const int isize = N*sizeof(int);
+
+	printf("%s", a);
+
+	cudaMalloc( (void**)&ad, csize ); 
+	cudaMalloc( (void**)&bd, isize ); 
+	cudaMemcpy( ad, a, csize, cudaMemcpyHostToDevice ); 
+	cudaMemcpy( bd, b, isize, cudaMemcpyHostToDevice ); 
+
+	dim3 dimBlock( blocksize, 1 );
+	dim3 dimGrid( 1, 1 );
+	hello<<<dimGrid, dimBlock>>>(ad, bd);
+	cudaMemcpy( a, ad, csize, cudaMemcpyDeviceToHost ); 
+	cudaFree( ad );
+	cudaFree( bd );
+
+	printf("%s\n", a);
 	return ;
-} 
-
+}
